@@ -1,0 +1,45 @@
+
+services:
+  database:
+    image: postgres:17
+    container_name: airspace-watch-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: airspace
+      POSTGRES_PASSWORD: local_dev_password
+      POSTGRES_DB: airspace_watch
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airspace -d airspace_watch"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: airspace-watch-api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./backend/.env
+    environment:
+      DB_HOST: database
+    depends_on:
+      database:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: airspace-watch-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
